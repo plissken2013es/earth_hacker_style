@@ -7,6 +7,9 @@ var ctx = c.getContext("2d"),
     H = c.height - 2 * GAME_MARGIN,
     DEBUG = false,
     borderLength = 2*(W+H+2*GAME_MARGIN);
+    
+g.width = c.width; 
+g.height = c.height;
 
 ctx.globalAlpha = 0.5;
 ctx.font = "normal 12px sans-serif";
@@ -453,10 +456,12 @@ function render (_t) {
 
     restore();
     
-    //drawPostProcessing();
+    drawPostProcessing();
 }
 
-var textureGame, blur1dShader, fbo1, fbo2, laserFbo, laserShader, glareShader, glareFbo;
+var textureGame, blur1dShader, fbo1, fbo2, laserFbo, laserShader, glareShader,
+  glareFbo, barrelShader, barrelFbo, copyShader, resFbo, resShader, linesShader, linesFbo,
+  frame = 1, dir = 1;
 
 function setupWebGL() {
     if (!gl) {
@@ -479,87 +484,72 @@ function setupWebGL() {
       1.0,  1.0
     ]), gl.STATIC_DRAW);
 
-    loadFiles(["shaders/static.vert", "shaders/blur1d.frag", "shaders/laser.frag", "shaders/glare.frag"], function (shaderText) {
-        blur1dShader = glCreateShader(shaderText[0], shaderText[1]);
-        gl.uniform2f(glUniformLocation(blur1dShader, "dim"), W, H);
-        
-        laserShader = glCreateShader(shaderText[0], shaderText[2]);
-        glareShader = glCreateShader(shaderText[0], shaderText[3]);
-        /*
-        var copyShader = glCreateShader(STATIC_VERT, COPY_FRAG);
-        var laserShader = glCreateShader( STATIC_VERT, LASER_FRAG);
-        var persistenceShader = glCreateShader(STATIC_VERT, PERSISTENCE_FRAG);
-        var playerShader = glCreateShader(STATIC_VERT, PLAYER_FRAG);
-        gl.uniform1f(glUniformLocation(playerShader, "S"), SEED);
-        var gameShader = glCreateShader(STATIC_VERT, GAME_FRAG);
+    /*
+    var copyShader = glCreateShader(STATIC_VERT, COPY_FRAG);
+    var laserShader = glCreateShader( STATIC_VERT, LASER_FRAG);
+    var persistenceShader = glCreateShader(STATIC_VERT, PERSISTENCE_FRAG);
+    var playerShader = glCreateShader(STATIC_VERT, PLAYER_FRAG);
+    gl.uniform1f(glUniformLocation(playerShader, "S"), SEED);
+    var gameShader = glCreateShader(STATIC_VERT, GAME_FRAG);
 
-        var persistenceFbo = glCreateFBO();
-        var playerFbo = glCreateFBO();
-        */
-        fbo1 = glCreateFBO();
-        fbo2 = glCreateFBO();
-        laserFbo = glCreateFBO();
-        glareFbo = glCreateFBO();
+    var persistenceFbo = glCreateFBO();
+    var playerFbo = glCreateFBO();
+    */
+    fbo1 = glCreateFBO();
+    fbo2 = glCreateFBO();
+    laserFbo = glCreateFBO();
+    glareFbo = glCreateFBO();
+    
+    resShader = glCreateShader(STATIC_VERT, RES_FRAG);
+    resFbo = glCreateFBO();
+    
+    copyShader = glCreateShader(STATIC_VERT, COPY_FRAG);
+    
+    barrelShader = glCreateShader(STATIC_VERT, BARREL_FRAG);
+    barrelFbo = glCreateFBO();
+    
+    linesShader = glCreateShader(STATIC_VERT, CRTLINES_FRAG);
+    linesFbo = glCreateFBO();
 
-        textureGame = glCreateTexture();
-        
-        raf(render);
-    }, function (url) {
-        console.error('Failed to download "' + url + '"');
-    }); 
+    textureGame = glCreateTexture();
+    
+    raf(render);
 }
 
 function drawPostProcessing () {
     glSetTexture(textureGame, c);
     
+    // Res
+    glBindFBO(resFbo);
+    glBindShader(resShader);
+    gl.uniform1f(glUniformLocation(resShader, "Resolution"), 1); // , frame);
+    gl.uniform1i(glUniformLocation(resShader, "t"), glBindTexture(textureGame, 0));
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    
+    // CRT lines
+    glBindFBO(linesFbo);
+    glBindShader(linesShader);
+    gl.uniform1f(glUniformLocation(linesShader, "frame"), frame);
+    gl.uniform1i(glUniformLocation(linesShader, "t"), glBindTexture(textureGame, 0));
+    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    
     // Laser
-    glBindFBO(laserFbo);
-    glBindShader(laserShader);
-    gl.uniform1i(glUniformLocation(laserShader, "t"), glBindTexture(textureGame, 0));
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    
-    // Glare
-    glBindFBO(glareFbo);
-    glBindShader(glareShader);
-    gl.uniform1i(glUniformLocation(glareShader, "t"), glBindTexture(glGetFBOTexture(laserFbo), 0));
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    glBindFBO(fbo1);
-    glBindShader(blur1dShader);
-    gl.uniform1i(glUniformLocation(blur1dShader, "t"), glBindTexture(glGetFBOTexture(glareFbo), 0));
-    gl.uniform2f(glUniformLocation(blur1dShader, "dir"),  2, -4 );
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    glBindFBO(glareFbo);
-    glBindShader(blur1dShader);
-    gl.uniform1i(glUniformLocation(blur1dShader, "t"), glBindTexture(glGetFBOTexture(fbo1), 0));
-    gl.uniform2f(glUniformLocation(blur1dShader, "dir"),  4, -8 );
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    
-    // Blur
-    glBindFBO(fbo1);
-    glBindShader(blur1dShader);
-    gl.uniform1i(glUniformLocation(blur1dShader, "t"), glBindTexture(glGetFBOTexture(laserFbo), 0));
-    gl.uniform2f(glUniformLocation(blur1dShader, "dir"),  0.5, 0.5 );
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    glBindFBO(fbo2);
-    glBindShader(blur1dShader);
-    gl.uniform1i(glUniformLocation(blur1dShader, "t"), glBindTexture(glGetFBOTexture(fbo1), 0));
-    gl.uniform2f(glUniformLocation(blur1dShader, "dir"),  -0.5, 0.5 );
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    glBindFBO(fbo1);
-    glBindShader(blur1dShader);
-    gl.uniform1i(glUniformLocation(blur1dShader, "t"), glBindTexture(glGetFBOTexture(fbo2), 0));
-    gl.uniform2f(glUniformLocation(blur1dShader, "dir"),  1, 0 );
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    glBindFBO(fbo2);
-    glBindShader(blur1dShader);
-    gl.uniform1i(glUniformLocation(blur1dShader, "t"), glBindTexture(glGetFBOTexture(fbo1), 0));
-    gl.uniform2f(glUniformLocation(blur1dShader, "dir"),  0, 1 );
+    glBindFBO(barrelFbo);
+    glBindShader(barrelShader);
+    gl.uniform1i(glUniformLocation(barrelShader, "t"), glBindTexture(glGetFBOTexture(resFbo), 0));
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
+    
+    /*
+    frame += dir;
+    if (frame > 50) dir = -1;
+    if (frame == 1) dir = 1;
+    */
+    frame++;
 }
 
-//setupWebGL();
+setupWebGL();
 
-raf(render);
+//raf(render);
