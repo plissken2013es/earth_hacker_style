@@ -2,13 +2,13 @@
 var ctx = c.getContext("2d"),
     gl = g.getContext("webgl") || g.getContext("experimental-webgl"),
     raf = requestAnimationFrame,
-    GAME_MARGIN = 60,
+    GAME_MARGIN = 50,
     W = c.width - 2 * GAME_MARGIN,
     H = c.height - 2 * GAME_MARGIN,
     DEBUG = false,
     borderLength = 2*(W+H+2*GAME_MARGIN);
     
-g.width = c.width; 
+g.width = c.width - 100; 
 g.height = c.height;
 
 ctx.globalAlpha = 0.5;
@@ -305,7 +305,7 @@ function drawBg () {
   ctx.globalAlpha = 1;
   ctx.fillStyle = "#000";
   ctx.fillRect(0, 0, c.width, c.height);
-  ctx.fillStyle = "#222";
+  ctx.fillStyle = "#000";
   ctx.fillRect(GAME_MARGIN, GAME_MARGIN, W, H);
 }
 
@@ -459,9 +459,7 @@ function render (_t) {
     drawPostProcessing();
 }
 
-var textureGame, blur1dShader, fbo1, fbo2, laserFbo, laserShader, glareShader,
-  glareFbo, barrelShader, barrelFbo, copyShader, resFbo, resShader, linesShader, linesFbo,
-  frame = 1, dir = 1;
+var textureGame, barrelShader, barrelFbo, laserShader, laserFbo, linesShader, linesFbo, frame = 1;
 
 function setupWebGL() {
     if (!gl) {
@@ -484,32 +482,19 @@ function setupWebGL() {
       1.0,  1.0
     ]), gl.STATIC_DRAW);
 
-    /*
-    var copyShader = glCreateShader(STATIC_VERT, COPY_FRAG);
-    var laserShader = glCreateShader( STATIC_VERT, LASER_FRAG);
-    var persistenceShader = glCreateShader(STATIC_VERT, PERSISTENCE_FRAG);
-    var playerShader = glCreateShader(STATIC_VERT, PLAYER_FRAG);
-    gl.uniform1f(glUniformLocation(playerShader, "S"), SEED);
-    var gameShader = glCreateShader(STATIC_VERT, GAME_FRAG);
 
-    var persistenceFbo = glCreateFBO();
-    var playerFbo = glCreateFBO();
-    */
-    fbo1 = glCreateFBO();
-    fbo2 = glCreateFBO();
-    laserFbo = glCreateFBO();
-    glareFbo = glCreateFBO();
-    
-    resShader = glCreateShader(STATIC_VERT, RES_FRAG);
-    resFbo = glCreateFBO();
-    
-    copyShader = glCreateShader(STATIC_VERT, COPY_FRAG);
-    
     barrelShader = glCreateShader(STATIC_VERT, BARREL_FRAG);
     barrelFbo = glCreateFBO();
     
     linesShader = glCreateShader(STATIC_VERT, CRTLINES_FRAG);
     linesFbo = glCreateFBO();
+    
+    laserShader = glCreateShader(STATIC_VERT, LASER_FRAG);
+    laserFbo = glCreateFBO();
+    
+    colorShader = glCreateShader(STATIC_VERT, COLOR_FRAG);
+    colorFbo = glCreateFBO();
+    gl.uniform2f(glUniformLocation(colorShader, "dim"), c.width, c.height);
 
     textureGame = glCreateTexture();
     
@@ -518,38 +503,33 @@ function setupWebGL() {
 
 function drawPostProcessing () {
     glSetTexture(textureGame, c);
+
+    // Laser
+    setFrameBuffer(laserFbo, laserShader, textureGame);
     
-    // Res
-    glBindFBO(resFbo);
-    glBindShader(resShader);
-    gl.uniform1f(glUniformLocation(resShader, "Resolution"), 1); // , frame);
-    gl.uniform1i(glUniformLocation(resShader, "t"), glBindTexture(textureGame, 0));
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    // Color
+    setFrameBuffer(colorFbo, colorShader, glGetFBOTexture(laserFbo), ["frame", frame]);
+
+    // Barrel
+    setFrameBuffer(barrelFbo, barrelShader, glGetFBOTexture(colorFbo));
     
     // CRT lines
-    glBindFBO(linesFbo);
-    glBindShader(linesShader);
-    gl.uniform1f(glUniformLocation(linesShader, "frame"), frame);
-    gl.uniform1i(glUniformLocation(linesShader, "t"), glBindTexture(textureGame, 0));
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
-    
-    // Laser
-    glBindFBO(barrelFbo);
-    glBindShader(barrelShader);
-    gl.uniform1i(glUniformLocation(barrelShader, "t"), glBindTexture(glGetFBOTexture(resFbo), 0));
-    gl.drawArrays(gl.TRIANGLES, 0, 6);
+    setFrameBuffer(linesFbo, linesShader, glGetFBOTexture(barrelFbo), ["frame", frame]);
     
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     
-    /*
-    frame += dir;
-    if (frame > 50) dir = -1;
-    if (frame == 1) dir = 1;
-    */
     frame++;
 }
 
-setupWebGL();
+function setFrameBuffer(fbo, shader, tex) {
+  glBindFBO(fbo);
+  glBindShader(shader);
+  gl.uniform1i(glUniformLocation(shader, "t"), glBindTexture(tex, 0));
+  Array.prototype.slice.call(arguments, 3).forEach(function(a) {
+    gl.uniform1f(glUniformLocation(shader, a[0]), a[1]);
+  });
+  gl.drawArrays(gl.TRIANGLES, 0, 6);
+}
 
-//raf(render);
+setupWebGL();

@@ -10,6 +10,6 @@ void main() {
         sin(67.0 * uv.x)
     );
     gl_FragColor = vec4(
-        c.r + c.g + c.b + texture2D(t, uv+off).b
+        c.rgb + .1*texture2D(t, uv+off).b, 1.
     );
 }
