@@ -1,6 +1,6 @@
 // Constants
 var ctx = c.getContext("2d"),
-    gl = g.getContext("webgl") || g.getContext("experimental-webgl"),
+    gl = gl_createContext(g),
     raf = requestAnimationFrame,
     GAME_MARGIN = 50,
     W = c.width - 2 * GAME_MARGIN,
@@ -459,7 +459,8 @@ function render (_t) {
     drawPostProcessing();
 }
 
-var textureGame, barrelShader, barrelFbo, laserShader, laserFbo, linesShader, linesFbo, frame = 1;
+var textureGame, barrelShader, barrelFbo, laserShader, laserFbo, linesShader, linesFbo, 
+  colorShader, colorFbo, frame = 1;
 
 function setupWebGL() {
     if (!gl) {
@@ -471,65 +472,49 @@ function setupWebGL() {
     gl.viewport(0, -15, c.width/1.2, c.height/1.2);
     gl.pixelStorei(gl.UNPACK_FLIP_Y_WEBGL, true);
 
-    var buffer = gl.createBuffer();
-    gl.bindBuffer(gl.ARRAY_BUFFER, buffer);
-    gl.bufferData(gl.ARRAY_BUFFER, new Float32Array([
+    var buffer = gl_createFloatBuffer(gl, [
       -1.0, -1.0,
       1.0, -1.0,
       -1.0,  1.0,
       -1.0,  1.0,
       1.0, -1.0,
       1.0,  1.0
-    ]), gl.STATIC_DRAW);
+    ]);
 
+    barrelShader = gl_createShaderProgram(gl, STATIC_VERT, BARREL_FRAG);
+    barrelFbo = gl_createFrameBufferObject(gl);
+    
+    linesShader = gl_createShaderProgram(gl, STATIC_VERT, CRTLINES_FRAG);
+    linesFbo = gl_createFrameBufferObject(gl);
+    
+    laserShader = gl_createShaderProgram(gl, STATIC_VERT, LASER_FRAG);
+    laserFbo = gl_createFrameBufferObject(gl);
+    
+    colorShader = gl_createShaderProgram(gl, STATIC_VERT, COLOR_FRAG);
+    colorFbo = gl_createFrameBufferObject(gl);
+    gl.uniform2f(gl_uniformLocation(gl, colorShader, "dim"), c.width, c.height);
 
-    barrelShader = glCreateShader(STATIC_VERT, BARREL_FRAG);
-    barrelFbo = glCreateFBO();
-    
-    linesShader = glCreateShader(STATIC_VERT, CRTLINES_FRAG);
-    linesFbo = glCreateFBO();
-    
-    laserShader = glCreateShader(STATIC_VERT, LASER_FRAG);
-    laserFbo = glCreateFBO();
-    
-    colorShader = glCreateShader(STATIC_VERT, COLOR_FRAG);
-    colorFbo = glCreateFBO();
-    gl.uniform2f(glUniformLocation(colorShader, "dim"), c.width, c.height);
-
-    textureGame = glCreateTexture();
+    textureGame = gl_createTextureObject(gl);
     
     raf(render);
 }
 
 function drawPostProcessing () {
-    glSetTexture(textureGame, c);
+    gl_setTexture(gl, textureGame, c);
 
     // Laser
-    setFrameBuffer(laserFbo, laserShader, textureGame);
-    
+    gl_setFrameBuffer(gl, laserFbo, laserShader, textureGame);
     // Color
-    setFrameBuffer(colorFbo, colorShader, glGetFBOTexture(laserFbo), ["frame", frame]);
-
+    gl_setFrameBuffer(gl, colorFbo, colorShader, getFBOTexture(laserFbo), ["frame", frame]);
     // Barrel
-    setFrameBuffer(barrelFbo, barrelShader, glGetFBOTexture(colorFbo));
-    
+    gl_setFrameBuffer(gl, barrelFbo, barrelShader, getFBOTexture(colorFbo));
     // CRT lines
-    setFrameBuffer(linesFbo, linesShader, glGetFBOTexture(barrelFbo), ["frame", frame]);
+    gl_setFrameBuffer(gl, linesFbo, linesShader, getFBOTexture(barrelFbo), ["frame", frame]);
     
     gl.bindFramebuffer(gl.FRAMEBUFFER, null);
     gl.drawArrays(gl.TRIANGLES, 0, 6);
     
     frame++;
-}
-
-function setFrameBuffer(fbo, shader, tex) {
-  glBindFBO(fbo);
-  glBindShader(shader);
-  gl.uniform1i(glUniformLocation(shader, "t"), glBindTexture(tex, 0));
-  Array.prototype.slice.call(arguments, 3).forEach(function(a) {
-    gl.uniform1f(glUniformLocation(shader, a[0]), a[1]);
-  });
-  gl.drawArrays(gl.TRIANGLES, 0, 6);
 }
 
 setupWebGL();

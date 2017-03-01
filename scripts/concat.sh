@@ -11,9 +11,7 @@ fi;
 cat src/lib/utils.js
 cat src/lib/gre-path.js
 cat src/lib/gre-asteroids.font.js
-cat src/lib/gre-webgl.js
-#cat src/lib/jsfxr.js
-#cat src/lib/audio.js
+cat src/lib/webgl.js
 
 # shaders
 
