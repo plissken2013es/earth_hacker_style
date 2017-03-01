@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Creating 3d graphics with WebGl - Reflections</title>
+    
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec3 aVertex;
+        attribute vec3 aNormal;
+        
+        uniform mat4 uModelView;
+        uniform mat4 uProjection;
+        uniform mat3 uNormalMatrix;
+        
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+        varying vec3 vColor;
+        
+        void main(void) {
+            vPosition = uModelView * vec4(aVertex, 1.0);
+            vColor = aVertex.xyz * 0.5 + 0.5;
+            vNormal = uNormalMatrix * aNormal;
+            
+            gl_Position = uProjection * vPosition;
+        }
+    </script>
+    
+    <script id="shader-fs" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+        
+        uniform vec3 uLightPosition;
+        uniform float uAmbient;
+        
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+        varying vec3 vColor;
+        
+        void main(void) {
+            vec3 normal = normalize(vNormal);
+            vec3 lightDir = normalize(uLightPosition - vPosition.xyz);
+            float diffuse = max(dot(normal, lightDir), 0.0);
+            
+            vec3 viewDir = normalize(-vPosition.xyz);
+            vec3 reflectDir = reflect(-lightDir, normal);
+            float specular = max(dot(reflectDir, viewDir), 0.0);
+            specular = pow(specular, 20.0);
+            
+            vec3 color = vColor * (uAmbient + diffuse + specular);
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+    
+</head>
+<body>
+    <canvas id="screenGL" width="512" height="512"></canvas>
+    
+    <script src="../lib/webgl.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Creating 3d graphics with WebGl - There be Light</title>
+    
+    <script id="shader-vs" type="x-shader/x-vertex">
+        attribute vec3 aVertex;
+        attribute vec3 aNormal;
+        
+        uniform mat4 uModelView;
+        uniform mat4 uProjection;
+        uniform mat3 uNormalMatrix;
+        
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+        varying vec3 vOrgNormal;
+        
+        void main(void) {
+            vPosition = uModelView * vec4(aVertex, 1.0);
+            vOrgNormal = aNormal;
+            vNormal = uNormalMatrix * aNormal;
+            
+            gl_Position = uProjection * vPosition;
+        }
+    </script>
+    
+    <script id="shader-fs" type="x-shader/x-fragment">
+        #ifdef GL_ES
+        precision mediump float;
+        #endif
+        
+        uniform sampler2D uTexture;
+        uniform vec3 uLightPosition;
+        uniform float uAmbient;
+        uniform float uShininess;
+        
+        varying vec4 vPosition;
+        varying vec3 vNormal;
+        varying vec3 vOrgNormal;
+        
+        void main(void) {
+            vec3 normal = normalize(vNormal);
+            vec3 lightDir = normalize(uLightPosition - vPosition.xyz);
+            vec3 viewDir = normalize(-vPosition.xyz);
+            vec3 reflectDir = reflect(-lightDir, normal);
+            
+            float diffuse = max(dot(normal, lightDir), 0.0);
+            float specular = max(dot(reflectDir, viewDir), 0.0);
+            specular = pow(specular, 20.0);
+            
+            float theta = acos(vOrgNormal.y);
+            float phi = atan(vOrgNormal.z, vOrgNormal.x);
+            vec2 texCoord = vec2(-phi / 2.0, theta) / 3.14159;
+            vec4 texColor = texture2D(uTexture, texCoord);
+            
+            vec3 color = texColor.rgb * (uAmbient + diffuse + specular);
+            gl_FragColor = vec4(color, 1.0);
+        }
+    </script>
+    
+</head>
+<body>
+    <canvas id="screenGL" width="512" height="512"></canvas>
+    
+    <script src="../_lib/sizzle.js"></script>
+    <script src="../_lib/gl-matrix.js"></script>
+    <script src="../_lib/jewel-webgl.js"></script>
+    <script src="main.js"></script>
+</body>
+</html>

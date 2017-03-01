@@ -1,0 +1,36 @@
+<!doctype html>
+<html>
+    <meta charset=utf-8>
+    <body id=b>
+        <canvas id=a width=324 height=196></canvas>
+        <script src="worldmap.js"></script>
+        <script>
+            // Canvas context:
+            c = a.getContext("2d");
+
+            // Golf starts here:
+            //b.bgColor="#000";
+            c.fillStyle="#000";
+            c.fillRect(0, 0, a.width, a.height);
+            c.strokeStyle="#59F";
+            
+            for (q of world) {
+                c.beginPath();
+                x = q.x - 26;
+                y = q.y - 130;
+                for (i of q.path) {
+                    z=i.charCodeAt()-6,c.lineTo(x+=(~~(z/11)-5),y+=(z%11-5));c.stroke()
+                }
+                c.lineTo(q.x, q.y);
+                c.closePath();
+            }
+            
+            window.onmousemove = function(e){
+                x = (~~(e.pageX - a.getBoundingClientRect().left - document.documentElement.scrollLeft - document.body.scrollLeft)) & 0b1111111111111100;
+                y = (~~(e.pageY - a.getBoundingClientRect().top - document.documentElement.scrollTop - document.body.scrollTop)) & 0b1111111111111100;
+                
+                console.log(x, y);
+            }
+        </script>
+    </body>
+</html>
