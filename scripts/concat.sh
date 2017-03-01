@@ -25,20 +25,6 @@ cd ..;
 
 # game
 
-#cat src/js/setup.js
-#cat src/js/state.js
-#cat src/js/sounds.js
-#cat src/js/input.js
-#cat src/js/behaviors.js
-#cat src/js/ai.js
-#cat src/js/asteroids.js
-#cat src/js/asteroidsIncoming.js
-#cat src/js/bullets.js
-#cat src/js/particles.js
-#cat src/js/spaceship.js
-#cat src/js/ufo.js
-#cat src/js/ui.js
-#cat src/js/effects.js
 cat src/js/game.js
 
 cat src/lib/post.js
