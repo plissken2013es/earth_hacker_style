@@ -6,6 +6,7 @@
         "clean": "rm -rf build/ ; mkdir -p build target",
         "compileglsl": "bash scripts/compileglslfiles.sh src/shaders build",
         "concat": "bash scripts/concat.sh > build/build.js",
+        "concat-gl": "bash scripts/concat-gl.sh > src/js/gl.js",
         "minify": "uglifyjs build/build.js -c --screw-ie8 -m -o build/build.min.js",
         "nominify": "cp build/build.js build/build.min.js",
         "gen": "cp src/index.html target/index.html && cp build/build.min.js target/b.js",

@@ -14,6 +14,13 @@ function gl_createFloatBuffer(gl, data) {
     return buffer;
 }
 
+function gl_createIndexBuffer(gl, data) {
+    var buffer = gl.createBuffer();
+    gl.bindBuffer(gl.ELEMENT_ARRAY_BUFFER, buffer);
+    gl.bufferData(gl.ELEMENT_ARRAY_BUFFER, new Uint16Array(data), gl.STATIC_DRAW);
+    return buffer;
+}
+
 function gl_createFrameBufferObject (gl, width, height) {
     var fb = gl.createFramebuffer();
     gl.bindFramebuffer(gl.FRAMEBUFFER, fb);
@@ -115,4 +122,37 @@ function gl_bindTexture (gl, t, unit) {
 
 function getFBOTexture (fbo) {
   return fbo[1];
+}
+
+function gl_setModelView(gl, program, pos, rot, axis) {
+    var mvMatrix = createIdentityMat4();
+    translateMat4(mvMatrix, pos);
+    rotateMat4(mvMatrix, rot, axis);
+
+    gl.uniformMatrix4fv(
+        gl.getUniformLocation(program, "uModelView"),
+        false,
+        mvMatrix
+    );
+    return mvMatrix;
+}
+
+function gl_setNormalMatrix(gl, program, mv) {
+    var normalMatrix = toMat3(mv);
+    gl.uniformMatrix3fv(
+        gl.getUniformLocation(program, "uNormalMatrix"),
+        false,
+        normalMatrix
+    );
+    return normalMatrix;
+}
+
+function gl_setProjection(gl, pgm, fov, aspect, near, far) {
+    var projMatrix = createPerspectiveMat4(fov, aspect, near, far);
+    gl.uniformMatrix4fv(
+        gl.getUniformLocation(pgm, "uProjection"),
+        false,
+        projMatrix
+    );
+    return projMatrix;
 }

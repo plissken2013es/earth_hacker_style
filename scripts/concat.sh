@@ -9,6 +9,7 @@ fi;
 # libs
 
 cat src/lib/utils.js
+cat src/lib/mat.js
 cat src/lib/gre-path.js
 cat src/lib/gre-asteroids.font.js
 cat src/lib/webgl.js
@@ -26,5 +27,7 @@ cd ..;
 # game
 
 cat src/js/game.js
+cat src/js/worldmap.js
+cat src/js/main.js
 
 cat src/lib/post.js
